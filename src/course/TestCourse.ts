@@ -36,6 +36,8 @@ type Kind = 'ground' | 'marked';
 /** Depth of the course pieces along z, metres. */
 const DEPTH = 5;
 const BOTTOM = -30;
+/** Radius of the curved ramps where a wall meets a floor or ceiling, metres. */
+const FILLET = 7;
 
 export function buildTestCourse(world: RAPIER.World, scene: THREE.Scene): CourseInfo {
   clearSurfaces();
@@ -56,7 +58,7 @@ export function buildTestCourse(world: RAPIER.World, scene: THREE.Scene): Course
   };
 
   /** One convex piece, outline counter-clockwise in the play plane. */
-  const poly = (outline: Vec2[], kind: Kind): void => {
+  const poly = (outline: Vec2[], kind: Kind, edges = true): void => {
     const points = new Float32Array(outline.length * 6);
     outline.forEach((p, i) => {
       points.set([p.x, p.y, -DEPTH / 2, p.x, p.y, DEPTH / 2], i * 6);
@@ -73,7 +75,7 @@ export function buildTestCourse(world: RAPIER.World, scene: THREE.Scene): Course
     mesh.receiveShadow = true;
     mesh.castShadow = kind === 'marked';
     scene.add(mesh);
-    scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 30), edgeMaterials[kind]));
+    if (edges) scene.add(new THREE.LineSegments(new THREE.EdgesGeometry(geometry, 30), edgeMaterials[kind]));
   };
 
   const box = (x1: number, y1: number, x2: number, y2: number, kind: Kind = 'ground'): void =>
@@ -93,8 +95,25 @@ export function buildTestCourse(world: RAPIER.World, scene: THREE.Scene): Course
   // Pit: 11 m, one hop.
   strip(106, 0, 140, 0);
 
-  // Wall run: glowing block taller than three hops, glowing landing strip behind it.
-  box(140, 0, 145, 16, 'marked');
+  /**
+   * Curved ramp filling the inside corner at `corner`: a quarter circle of
+   * `radius` around `centre`, swept from angle `from` to `to` (degrees), built
+   * from thin convex wedges so the car rolls from floor to wall smoothly.
+   */
+  const fillet = (corner: Vec2, centre: Vec2, from: number, to: number, kind: Kind = 'marked'): void => {
+    const steps = 10;
+    const arc = Array.from({ length: steps + 1 }, (_, i) => {
+      const a = ((from + ((to - from) * i) / steps) * Math.PI) / 180;
+      return vec(centre.x + FILLET * Math.cos(a), centre.y + FILLET * Math.sin(a));
+    });
+    for (let i = 0; i < steps; i++) poly([corner, arc[i], arc[i + 1]], kind, false);
+  };
+
+  // Wall run: glowing block taller than three hops, with curved ramps up its
+  // face and down onto the glowing landing strip behind it.
+  box(140, BOTTOM, 145, 16, 'marked');
+  fillet(vec(140, 0), vec(140 - FILLET, FILLET), -90, 0);
+  fillet(vec(145, 0), vec(145 + FILLET, FILLET), 180, 270);
   strip(145, 0, 170, 0, 'marked');
   strip(170, 0, 185, 0);
 
@@ -103,11 +122,13 @@ export function buildTestCourse(world: RAPIER.World, scene: THREE.Scene): Course
 
   // Loop and ceiling, a "7" shape: glowing wall and overhead arm, solid block
   // behind them that ramps back down.
-  box(268, 0, 270, 12, 'marked'); // wall
-  box(238, 12, 270, 14, 'marked'); // ceiling underside, end and top
-  box(270, 0, 300, 14);
-  strip(300, 14, 318, 0);
-  strip(318, 0, 400, 0);
+  box(268, 0, 270, 16, 'marked'); // wall
+  box(238, 16, 270, 18, 'marked'); // ceiling underside, end and top
+  fillet(vec(268, 0), vec(268 - FILLET, FILLET), -90, 0); // floor to wall
+  fillet(vec(268, 16), vec(268 - FILLET, 16 - FILLET), 0, 90); // wall to ceiling
+  box(270, 0, 300, 18);
+  strip(300, 18, 324, 0);
+  strip(324, 0, 400, 0);
   box(400, 0, 404, 12); // end stop
 
   const finishX = 360;

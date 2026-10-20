@@ -65,7 +65,10 @@ export class Car {
     this.collider = world.createCollider(
       RAPIER.ColliderDesc.roundCuboid(length / 2 - r, height / 2 - r, HALF_DEPTH - r, r)
         .setMass(mass)
+        // Frictionless even against grippy ground (Rapier averages friction by
+        // default): traction comes from the throttle, so a scraping nose must slide.
         .setFriction(0)
+        .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
         .setRestitution(0),
       this.body,
     );

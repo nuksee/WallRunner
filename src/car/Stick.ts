@@ -1,7 +1,7 @@
 import type RAPIER from '@dimforge/rapier3d-compat';
 import { TUNING } from '../config/tuning';
 import { allSurfaces, surfaceOf } from '../course/Surfaces';
-import { Vec2, closestPointOnPolygon, dot, length, normalize, scale, sub } from '../util/vec2';
+import { Vec2, add, closestPointOnPolygon, dot, length, normalize, scale, sub, vec } from '../util/vec2';
 import { Car, RayHit } from './Car';
 
 /**
@@ -53,16 +53,20 @@ export class Stick {
 
   private holdTo(handle: number): void {
     const car = this.car;
-    // Normal from the nearest point on the surface: the face normal on a flat
-    // face, and a direction that sweeps around the edge at a convex corner.
-    const normal = this.normalFrom(handle);
+    // On the surface: the wheels' ray normals, which follow curved ramps.
+    // Off it (rounding a convex edge): away from the nearest point on the
+    // surface, a direction that sweeps around the edge.
+    const onMarked = car.wheelHits.filter((h): h is RayHit => h !== null && isMarked(h));
+    const normal = onMarked.length
+      ? normalize(onMarked.reduce((sum, h) => add(sum, h.normal), vec(0, 0)))
+      : this.normalFrom(handle);
 
     car.setStuck(true);
     car.setGravityOverride(scale(normal, -1), TUNING.stick.gravity);
     car.setDriveSpeed(TUNING.stick.driveSpeed);
     car.turnToward(Car.angleForUp(normal), TUNING.stick.alignRate);
 
-    if (!car.wheelHits.some((h) => h?.collider.handle === handle)) {
+    if (onMarked.length === 0) {
       // Rounding a convex corner: cancel motion away from the surface so the car orbits the edge.
       const v = car.velocity;
       const away = dot(v, normal);
@@ -73,26 +77,23 @@ export class Stick {
   private pickSurface(): number | null {
     const car = this.car;
     const wheels = car.wheelHits.filter((h): h is RayHit => h !== null);
-    const marked = (h: RayHit) => surfaceOf(h.collider)?.marked === true;
 
     // 1. Nose into a marked surface: climb onto it (floor to wall, wall to ceiling).
     const ahead = car.aheadHit;
-    if (ahead && marked(ahead) && dot(ahead.normal, car.forward) < -0.5) return ahead.collider.handle;
+    if (ahead && isMarked(ahead) && dot(ahead.normal, car.forward) < -0.5) return ahead.collider.handle;
 
-    // 2. Wheels still on the current surface.
-    if (this.attached !== null && wheels.some((h) => h.collider.handle === this.attached)) return this.attached;
-
-    // 3. Wheels on unmarked ground: nothing to stick to.
-    if (wheels.some((h) => !marked(h))) return null;
-
-    // 4. Mid-corner or just off the current surface's edge: hold while it is within reach.
-    if (this.attached !== null && this.distanceTo(this.attached) <= this.reach) return this.attached;
-
-    // 5. Wheels on a new marked surface.
-    const onMarked = wheels.find(marked);
+    // 2. Wheels on a marked surface, front wheel first so curved ramps hand
+    //    the car from one piece to the next.
+    const onMarked = [...wheels].reverse().find(isMarked);
     if (onMarked) return onMarked.collider.handle;
 
-    // 6. In the air: grab the nearest marked surface within reach.
+    // 3. Wheels only on unmarked ground: nothing to stick to.
+    if (wheels.length > 0) return null;
+
+    // 4. Rounding the current surface's edge: hold while it is within reach.
+    if (this.attached !== null && this.distanceTo(this.attached) <= this.reach) return this.attached;
+
+    // 5. In the air: grab the nearest marked surface within reach.
     return this.nearestMarked();
   }
 
@@ -138,3 +139,5 @@ export class Stick {
     this.car.setDriveSpeed(null);
   }
 }
+
+const isMarked = (hit: RayHit): boolean => surfaceOf(hit.collider)?.marked === true;
