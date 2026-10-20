@@ -22,6 +22,9 @@ export class Hud {
   private readonly hint: HTMLElement;
   private readonly popups: HTMLElement;
   private readonly banner: HTMLElement;
+  private readonly summary: HTMLElement;
+  /** Where the results screen shows the leaderboard (C7 fills it). */
+  readonly boardSlot: HTMLElement;
   private hintText = '';
   private tickCost = -1;
 
@@ -35,7 +38,7 @@ export class Hud {
        <div class="hud-score"><b>0</b><span>0 m</span></div>
        <div class="hud-hint"></div>
        <div class="hud-popups"></div>
-       <div class="hud-banner hidden"></div>`,
+       <div class="hud-banner hidden"><div class="run-summary"></div><div class="run-board"></div></div>`,
     );
     const q = (sel: string) => overlay.querySelector(sel) as HTMLElement;
     this.fuelFill = q('.fuel-fill');
@@ -47,6 +50,8 @@ export class Hud {
     this.hint = q('.hud-hint');
     this.popups = q('.hud-popups');
     this.banner = q('.hud-banner');
+    this.summary = q('.run-summary');
+    this.boardSlot = q('.run-board');
   }
 
   update(s: HudState): void {
@@ -89,7 +94,7 @@ export class Hud {
 
   showRunOver(title: string, r: RunResult, best: number, isBest: boolean, restartLabel: string): void {
     const row = (label: string, value: string) => `<tr><td>${label}</td><td>${value}</td></tr>`;
-    this.banner.innerHTML = `
+    this.summary.innerHTML = `
       <strong>${title}</strong>
       <span class="final">${r.score}</span>
       <small>${isBest ? 'New best!' : `Best ${best}`}</small>

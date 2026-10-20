@@ -50,8 +50,8 @@ Eight specs, each owning one concern behind a narrow interface, so any one can b
 | C4 Course generator | Chunks, pits, hazards, marked surfaces, pickups (L1) | C1–C3 constants | Every chunk passes a reachability check using real hop and stick limits | `src/generator/` |
 | C5 Rules and score | Fail states, charge drain, distance, style bonuses (R1, R2) | C1–C4 events | A run emits one result: distance, score, cause of death, duration | `src/rules/Rules.ts` |
 | C6 Input | Keyboard map and 3-button touch layout (R3, B1) | none | Same three actions on both; touch tested on a real phone | `src/input/Input.ts` |
-| C7 Leaderboard | Submit, sanity check, top-N, nickname filter (P3, B2, B4, B5) | C5 result | Impossible scores rejected; board loads in game and on its own page | `src/leaderboard/` (M3) |
-| C8 Ads | Portal SDK slot for interstitials and rewarded ads (P2) | C5 | Stubbed in v1: one interface, no live ads | `src/ads/` (M3) |
+| C7 Leaderboard | Submit, sanity check, top-N, nickname filter (P3, B2, B4, B5) | C5 result | Impossible scores rejected; board loads in game and on its own page | `src/leaderboard/`, `supabase/leaderboard.sql` |
+| C8 Ads | Portal SDK slot for interstitials and rewarded ads (P2) | C5 | Stubbed in v1: one interface, no live ads | `src/ads/` |
 
 **Interfaces to keep narrow:** C1–C3 expose tuning constants (`src/config/tuning.ts`) that C4 reads; C5 consumes events only; C7 sees only C5's run result.
 
@@ -89,6 +89,28 @@ Turn the feel prototype into the real loop: an endless generated course with all
 
 **Exit test:** five people who haven't seen it play on a phone. Pass if most beat their first score within three runs and nobody hits a jump they call impossible.
 
+## Milestone 3: leaderboard and ads stub
+
+Make the score public (P3) and leave a clean slot for ads (P2). Defined on 2026-10-20 from the C7 and C8 rows above. The game is still static on GitHub Pages; the only backend is a Supabase project the owner creates (B4).
+
+**In scope:** C7, C8 stub, a standalone leaderboard page.
+**Out of scope:** live ads and portal SDKs, accounts or portal identity (B5 stages two and three), sound, menus, naming and art direction.
+
+- [x] C7: nickname (3–16 characters, word filter) and a random player id per browser (B5 stage one)
+- [x] C7: Supabase board behind one `Leaderboard` interface; the browser calls two Postgres functions with the anon key and cannot touch the tables (row level security)
+- [x] C7: server sanity checks (B2): score adds up, average speed, style points per second, near misses per metre, and no run longer than the time since that player's last submission. The client runs the same checks first
+- [x] C7: runs played with tuned values are not posted
+- [x] C7: results screen posts the run and shows rank and top five; `leaderboard.html` shows the top 100
+- [x] C7: manual removal path: ban a player or hide a score in the Supabase table editor
+- [x] C7: falls back to an on-device board when no backend is configured
+- [x] C8: `Ads` interface with interstitial and rewarded calls; stub does nothing, `?ads=debug` shows placeholder cards
+- [x] C8: interstitial slot between runs, every 3rd run and at most every 90 s (tunable)
+- [ ] Owner creates the Supabase project and runs `supabase/leaderboard.sql`; URL and anon key go in `src/config/backend.ts`
+
+**Decisions made in M3** (small, reversible): one row per player on the board (their best run); the rewarded call exists but has no placement, because a reward that changes a run (a revive, extra charge) needs its own leaderboard rule first.
+
+**Exit test:** five people play on their own phones. Pass if every score they post shows up on the board, a deliberately faked score is rejected, and nobody calls the between-run slot intrusive.
+
 ## Open questions and risks
 
 | Item | Why it matters | Mitigation or owner |
@@ -96,7 +118,8 @@ Turn the feel prototype into the real loop: an endless generated course with all
 | Hold-to-stick plus Hop on touch | Holding one thumb while tapping another may feel cramped | M1 exit test decides; fallback is auto-stick (reopens P1) |
 | Four fail states for strangers | Can feel unfair in the first minute | Introduce one per early stretch of the course in C4 |
 | Generator reachability | An impossible gap kills trust in an endless runner | C4 validates each chunk against C1–C3 constants (done in M2; the check is a model, so the M2 playtest should report any jump that felt impossible) |
-| Portal rules vs own backend | Portals may limit outside services or provide their own leaderboards | Check target portal terms before building C7 |
-| Nickname abuse | Public board shows player-typed names | Filter in C7; manual removal path |
+| Portal rules vs own backend | Portals may limit outside services or provide their own leaderboards | C7 sits behind one interface, so a portal's own board can replace Supabase; check the chosen portal's terms before listing |
+| Nickname abuse | Public board shows player-typed names | Word filter and character limits in C7 (client and server); ban or hide in the Supabase table editor |
+| Sanity checks are basic | B2 accepts that a determined cheater can post a plausible fake score | Store the seed with every score so a suspect run can be replayed later; tighten limits if the board gets gamed |
 | Car and game name | Needed before any public link | Open: pick after M1 |
 | Art direction | Shapes the portal listing | Open: decide after M1 |

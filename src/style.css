@@ -27,8 +27,9 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e8
 .popup { font-size: 20px; font-weight: 600; text-shadow: 0 2px 6px #000; animation: rise 1.4s ease-out forwards; white-space: nowrap; }
 .popup b { color: #ffd166; }
 @keyframes rise { 0% { opacity: 0; transform: translateY(12px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-24px); } }
-.hud-banner { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); padding: 20px 36px; border-radius: 10px; background: rgba(11, 15, 23, 0.88); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; min-width: 240px; }
-.hud-banner strong { font-size: 30px; }
+.hud-banner { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 28px; border-radius: 10px; background: rgba(11, 15, 23, 0.88); display: flex; gap: 28px; align-items: flex-start; max-height: calc(100vh - 24px); max-width: calc(100vw - 24px); box-sizing: border-box; overflow: auto; }
+.run-summary { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 220px; }
+.run-summary strong { font-size: 30px; }
 .hud-banner .final { font-size: 44px; font-weight: 700; color: #4cc9f0; font-variant-numeric: tabular-nums; }
 .hud-banner.best .final { color: #ffd166; }
 .hud-banner small { font-size: 15px; opacity: 0.8; }
@@ -55,7 +56,41 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e8
   .hud-score b { font-size: 24px; }
   .hud-hint { font-size: 16px; }
   .hud-banner { padding: 16px 20px; text-align: center; }
-  .hud-banner strong { font-size: 24px; }
+  .run-summary strong { font-size: 24px; }
   .touch-stick, .touch-hop { width: 128px; height: 128px; }
   .touch-brake { right: 4vw; bottom: calc(6vh + 144px); width: 80px; height: 80px; }
+}
+
+.run-board { width: 230px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.run-board h3 { margin: 4px 0 2px; font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.75; }
+.board-name { display: flex; gap: 6px; }
+.board-name input { flex: 1; min-width: 0; padding: 6px 8px; border-radius: 6px; border: 1px solid #56607a; background: #141a26; color: inherit; font: inherit; user-select: text; -webkit-user-select: text; }
+.board-name button, .board-rename { padding: 6px 10px; border-radius: 6px; border: 1px solid #4cc9f0; background: rgba(76, 201, 240, 0.15); color: inherit; font: inherit; cursor: pointer; }
+.board-status { margin: 0; min-height: 1.3em; color: #4cc9f0; }
+.board-status.warn { color: #ff8fa3; }
+.board-list { margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
+.board-list li { display: flex; gap: 8px; padding: 3px 6px; border-radius: 4px; }
+.board-list li.me { background: rgba(255, 209, 102, 0.18); color: #ffd166; }
+.board-list li.empty { opacity: 0.6; }
+.board-list .rank { width: 2.2em; opacity: 0.7; }
+.board-list .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-links { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+.board-links a { color: #4cc9f0; }
+.board-rename { padding: 3px 8px; font-size: 12px; border-color: #56607a; background: none; }
+
+.ad-placeholder { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.85); z-index: 10; }
+.ad-placeholder div { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 40px 60px; border: 2px dashed #56607a; border-radius: 12px; }
+.ad-placeholder b { font-size: 28px; letter-spacing: 0.2em; }
+.ad-placeholder small { opacity: 0.6; }
+
+@media (max-width: 700px), (max-height: 480px) {
+  .hud-banner { padding: 12px 16px; gap: 16px; }
+  .run-summary { min-width: 180px; }
+  .run-summary strong { font-size: 20px; }
+  .hud-banner .final { font-size: 32px; }
+  .hud-banner table { font-size: 13px; margin-top: 2px; }
+  .run-board { width: 200px; font-size: 13px; }
+}
+@media (max-width: 480px) {
+  .hud-banner { flex-direction: column; align-items: center; }
 }

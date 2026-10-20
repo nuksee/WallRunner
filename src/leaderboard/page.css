@@ -1,0 +1,14 @@
+:root { color-scheme: dark; }
+body { margin: 0; background: #0b0f17; color: #e8edf5; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; }
+main { max-width: 640px; margin: 0 auto; padding: 24px 16px 48px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+h1 { font-size: 24px; margin: 0; }
+.play { padding: 8px 18px; border-radius: 8px; background: #4cc9f0; color: #0b0f17; font-weight: 600; text-decoration: none; }
+.note { min-height: 1.3em; opacity: 0.75; }
+.note.warn { color: #ff8fa3; opacity: 1; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #1e2533; }
+th { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.6; }
+td:nth-child(n + 3), th:nth-child(n + 3) { text-align: right; }
+td:nth-child(2) { max-width: 0; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+tr.me td { color: #ffd166; background: rgba(255, 209, 102, 0.08); }

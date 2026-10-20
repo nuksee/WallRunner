@@ -1,5 +1,6 @@
 import GUI from 'lil-gui';
 import { TUNING } from '../config/tuning';
+import { isTyping } from '../util/typing';
 
 /**
  * Tuning panel: live sliders over the shared constants in tuning.ts.
@@ -46,6 +47,10 @@ export function createTuningPanel(overlay: HTMLElement, onRestart: () => void): 
   rules.add(TUNING.rules, 'airPointsPerSecond', 0, 100, 1).name('air pts / s');
   rules.add(TUNING.rules, 'nearMissPoints', 0, 200, 5).name('near-miss pts');
 
+  const ads = gui.addFolder('Ads (C8)').close();
+  ads.add(TUNING.ads, 'interstitialEveryRuns', 0, 10, 1).name('interstitial every N runs');
+  ads.add(TUNING.ads, 'interstitialMinGap', 0, 300, 5).name('min gap (s)');
+
   gui.add({ restart: onRestart }, 'restart').name('Restart run (R)');
   gui.add({ copy: () => navigator.clipboard?.writeText(JSON.stringify(TUNING, null, 2)) }, 'copy').name('Copy values');
 
@@ -57,6 +62,6 @@ export function createTuningPanel(overlay: HTMLElement, onRestart: () => void): 
   button.addEventListener('click', toggle);
   overlay.appendChild(button);
   window.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyT') toggle();
+    if (e.code === 'KeyT' && !isTyping(e)) toggle();
   });
 }

@@ -107,7 +107,28 @@ export const TUNING = {
     /** How close counts as a near miss, m. */
     nearMissMargin: 1.1,
   },
+
+  /** C8 Ads. */
+  ads: {
+    /** Show an interstitial before every Nth new run (0 = never). */
+    interstitialEveryRuns: 3,
+    /** Least time between interstitials, s. Portals usually require a gap. */
+    interstitialMinGap: 90,
+  },
 };
+
+const DEFAULTS = snapshot();
+
+/**
+ * True when any gameplay value differs from the shipped defaults. Tuned runs
+ * are not sent to the global leaderboard (ad settings don't count).
+ */
+export const isTuned = (): boolean => snapshot() !== DEFAULTS;
+
+function snapshot(): string {
+  const { ads: _ads, ...gameplay } = TUNING;
+  return JSON.stringify(gameplay);
+}
 
 /** Hop launch speed derived from hop height: v = sqrt(2 g h), m/s. */
 export const hopSpeed = (): number => Math.sqrt(2 * TUNING.world.gravity * TUNING.hop.height);
