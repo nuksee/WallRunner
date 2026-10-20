@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  // Relative asset paths so the build runs from any sub-path (test URL, game portals).
+  // Relative asset paths so the build runs from any sub-path (GitHub Pages, game portals).
   base: './',
   server: { host: true },
-  // Phaser alone is ~1.4 MB minified; splitting it buys nothing for a single-scene game.
-  build: { chunkSizeWarningLimit: 2000 },
+  build: {
+    // main.ts awaits Rapier's WASM init at the top level.
+    target: 'es2022',
+    // Three.js and Rapier (WASM inlined) are large; splitting buys little for one page.
+    chunkSizeWarningLimit: 3000,
+  },
 });

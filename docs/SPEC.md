@@ -12,7 +12,7 @@ Build the seed of a real product: a free, ad-supported browser game for public p
 
 ## Locked decisions
 
-All 21 decisions below were confirmed on 2026-10-20. Changing one means reopening its row, not editing it quietly.
+All 21 decisions below were confirmed on 2026-10-20. Changing one means reopening its row, not editing it quietly. S2 and B3 were reopened and changed on 2026-10-20 (2.5D switch, chosen by the owner after the first M1 playtest).
 
 | ID | Area | Decision |
 | --- | --- | --- |
@@ -21,7 +21,7 @@ All 21 decisions below were confirmed on 2026-10-20. Changing one means reopenin
 | G3 | Goal | Core fantasy is short flights plus wall and ceiling driving |
 | G4 | Goal | Old top-down prototype is a throwaway; only lessons carry over |
 | S1 | Shape | Original fictional car; no Tesla name, logo or likeness |
-| S2 | Shape | 2D side-scroller |
+| S2 | Shape | 2.5D side-scroller: 3D world and camera, play on one side-on plane |
 | S3 | Shape | Ships first in the web browser |
 | L1 | Loop | Endless runner on a procedurally generated course |
 | L2 | Loop | Flight = thrust hops from a limited, refilling fuel tank |
@@ -34,7 +34,7 @@ All 21 decisions below were confirmed on 2026-10-20. Changing one means reopenin
 | P3 | Product | v1 success = a live global leaderboard people compete on |
 | B1 | Build | Auto-throttle; player controls Hop, Stick (hold), Brake |
 | B2 | Build | Anti-cheat = basic server sanity checks; physics need not be deterministic |
-| B3 | Build | Phaser 3 + TypeScript, Matter.js physics |
+| B3 | Build | Three.js + TypeScript, Rapier physics (motion locked to the play plane) |
 | B4 | Build | Managed backend with built-in auth (Supabase-type) |
 | B5 | Build | Identity staged: nickname (v1), portal identity, then optional account |
 
@@ -62,13 +62,13 @@ Prove that hopping and wall-driving are fun on one handmade test course before b
 **In scope:** C1, C2, C3, C6, plus a bare distance counter. Placeholder shapes for art.
 **Out of scope:** C4, C5 style scoring and charge, C7, C8, sound, menus.
 
-- [ ] Phaser 3 + TypeScript project with Matter.js, deployed to a test URL
+- [x] Three.js + TypeScript project with Rapier, deployed to a test URL (GitHub Pages)
 - [x] C1: auto-throttle car with brake and upside-down detection
 - [x] C2: hop with fuel tank and on-screen meter
 - [x] C3: hold-to-stick on marked surfaces, including one floor-wall-ceiling loop
 - [x] C6: keyboard and 3-button touch layout
 - [x] Handmade test course: one pit, one wall run, one ceiling section, one hop-only gap
-- [ ] Tuning panel for hop force, fuel cost, refill rate and stick speed (constants exist; panel pending)
+- [x] Tuning panel for hop force, fuel cost, refill rate and stick speed (gear button or T)
 
 **Exit test:** five people who haven't seen it play on a phone without instructions. Pass if at least three clear the ceiling section and start another run unprompted.
 
