@@ -1,0 +1,31 @@
+html, body { margin: 0; height: 100%; background: #0b0f17; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
+body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e8edf5; }
+#game, #game canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#overlay { position: fixed; inset: 0; pointer-events: none; }
+#overlay > * { pointer-events: auto; }
+
+.hud-fuel { position: absolute; top: 16px; left: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: 0.1em; pointer-events: none; }
+.fuel-bar { position: relative; width: 200px; height: 14px; background: rgba(0, 0, 0, 0.5); border: 2px solid #56607a; border-radius: 4px; overflow: hidden; }
+.fuel-fill { height: 100%; background: #4cc9f0; transition: background 0.15s; }
+.fuel-fill.low { background: #ff4d6d; }
+.fuel-ticks i { position: absolute; top: 0; bottom: 0; width: 2px; background: #0b0f17; }
+.stick-light { width: 12px; height: 12px; border-radius: 50%; background: #2a3142; transition: background 0.1s, box-shadow 0.1s; }
+.stick-light.on { background: #4cc9f0; box-shadow: 0 0 10px #4cc9f0; }
+
+.hud-distance { position: absolute; top: 10px; right: 64px; font-size: 28px; font-variant-numeric: tabular-nums; pointer-events: none; }
+.hud-hint { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 8px; background: rgba(11, 15, 23, 0.7); font-size: 20px; text-align: center; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+.hud-hint.show { opacity: 1; }
+.hud-banner { position: absolute; top: 36%; left: 50%; transform: translate(-50%, -50%); padding: 20px 36px; border-radius: 10px; background: rgba(11, 15, 23, 0.85); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.hud-banner strong { font-size: 36px; }
+.hud-banner span { font-size: 24px; color: #4cc9f0; }
+.hud-banner em { font-style: normal; font-size: 16px; opacity: 0.8; margin-top: 8px; }
+.hidden { display: none !important; }
+
+.tuning-toggle { position: absolute; top: 10px; right: 14px; width: 38px; height: 38px; border-radius: 8px; border: 1px solid #56607a; background: rgba(11, 15, 23, 0.6); color: #e8edf5; font-size: 20px; cursor: pointer; }
+.tuning-panel { position: fixed !important; top: 56px !important; right: 14px !important; max-height: calc(100vh - 80px); overflow: auto; }
+
+.touch-button { position: absolute; display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.12); font-size: 18px; font-weight: 600; letter-spacing: 0.05em; touch-action: none; }
+.touch-button.down { background: rgba(76, 201, 240, 0.45); }
+.touch-stick { left: 4vw; bottom: 6vh; width: 150px; height: 150px; }
+.touch-hop { right: 4vw; bottom: 6vh; width: 150px; height: 150px; }
+.touch-brake { right: calc(4vw + 170px); bottom: 4vh; width: 92px; height: 92px; font-size: 14px; }

@@ -1,7 +1,8 @@
-import Phaser from 'phaser';
-import { MARKED_SURFACE_LABEL, TUNING } from '../config/tuning';
-import { Vec, closestPointOnPolygon, dot, length, normalize, scale, sub } from '../util/vec';
-import { Car, CarEvent, Contact } from './Car';
+import type RAPIER from '@dimforge/rapier3d-compat';
+import { TUNING } from '../config/tuning';
+import { allSurfaces, surfaceOf } from '../course/Surfaces';
+import { Vec2, closestPointOnPolygon, dot, length, normalize, scale, sub } from '../util/vec2';
+import { Car, RayHit } from './Car';
 
 /**
  * C3 Stick: while the Stick action is held, the car clings to marked surfaces
@@ -9,14 +10,15 @@ import { Car, CarEvent, Contact } from './Car';
  * ceilings and around corners. Releasing, or hopping, drops it.
  */
 export class Stick {
-  private attached: MatterJS.BodyType | null = null;
+  /** Collider handle of the surface the car is stuck to. */
+  private attached: number | null = null;
   private releaseTimer = 0;
 
   constructor(
-    private readonly scene: Phaser.Scene,
+    private readonly world: RAPIER.World,
     private readonly car: Car,
   ) {
-    car.events.on(CarEvent.Thrust, () => {
+    car.events.on('thrust', () => {
       this.releaseTimer = TUNING.stick.hopRelease;
       this.detach();
     });
@@ -26,38 +28,41 @@ export class Stick {
     return this.attached !== null;
   }
 
-  /** Call once per frame, before Car.update. */
+  reset(): void {
+    this.attached = null;
+    this.releaseTimer = 0;
+  }
+
+  /** Call once per physics step, after Car.sense and before Car.step. */
   update(dt: number, held: boolean): void {
     this.releaseTimer = Math.max(0, this.releaseTimer - dt);
     if (!held || this.releaseTimer > 0 || this.car.isCrashed) {
       this.detach();
       return;
     }
-
     const surface = this.pickSurface();
-    if (!surface) {
+    if (surface === null) {
       this.detach();
       return;
     }
     this.attached = surface;
-    this.holdTo(surface, dt);
+    this.holdTo(surface);
   }
 
   // ---- Internals ----------------------------------------------------------
 
-  private holdTo(surface: MatterJS.BodyType, dt: number): void {
+  private holdTo(handle: number): void {
     const car = this.car;
     // Normal from the nearest point on the surface: the face normal on a flat
     // face, and a direction that sweeps around the edge at a convex corner.
-    // (Matter's own contact normals can point along an end face at seams.)
-    const normal = this.normalFrom(surface);
+    const normal = this.normalFrom(handle);
 
     car.setStuck(true);
     car.setGravityOverride(scale(normal, -1), TUNING.stick.gravity);
     car.setDriveSpeed(TUNING.stick.driveSpeed);
-    car.rotateToward(Car.angleForUp(normal), TUNING.stick.alignRate * dt);
+    car.turnToward(Car.angleForUp(normal), TUNING.stick.alignRate);
 
-    if (!car.contacts.some((c) => c.body === surface)) {
+    if (!car.wheelHits.some((h) => h?.collider.handle === handle)) {
       // Rounding a convex corner: cancel motion away from the surface so the car orbits the edge.
       const v = car.velocity;
       const away = dot(v, normal);
@@ -65,70 +70,71 @@ export class Stick {
     }
   }
 
-  private pickSurface(): MatterJS.BodyType | null {
+  private pickSurface(): number | null {
     const car = this.car;
-    const marked = car.contacts.filter((c) => isMarked(c.body));
+    const wheels = car.wheelHits.filter((h): h is RayHit => h !== null);
+    const marked = (h: RayHit) => surfaceOf(h.collider)?.marked === true;
 
     // 1. Nose into a marked surface: climb onto it (floor to wall, wall to ceiling).
-    const ahead = marked.find((c) => dot(c.normal, car.forward) < -0.5);
-    if (ahead) return ahead.body;
+    const ahead = car.aheadHit;
+    if (ahead && marked(ahead) && dot(ahead.normal, car.forward) < -0.5) return ahead.collider.handle;
 
     // 2. Wheels still on the current surface.
-    const onWheels = (c: Contact) => dot(c.normal, car.up) > 0.5;
-    if (this.attached && marked.some((c) => c.body === this.attached && onWheels(c))) return this.attached;
+    if (this.attached !== null && wheels.some((h) => h.collider.handle === this.attached)) return this.attached;
 
     // 3. Wheels on unmarked ground: nothing to stick to.
-    if (car.contacts.some((c) => !isMarked(c.body) && onWheels(c))) return null;
+    if (wheels.some((h) => !marked(h))) return null;
 
     // 4. Mid-corner or just off the current surface's edge: hold while it is within reach.
-    if (this.attached && this.distanceTo(this.attached) <= this.reach) return this.attached;
+    if (this.attached !== null && this.distanceTo(this.attached) <= this.reach) return this.attached;
 
-    // 5. Touching a new marked surface: take the one under the wheels.
-    if (marked.length > 0) return bestUnderWheels(marked, car.up).body;
+    // 5. Wheels on a new marked surface.
+    const onMarked = wheels.find(marked);
+    if (onMarked) return onMarked.collider.handle;
 
     // 6. In the air: grab the nearest marked surface within reach.
     return this.nearestMarked();
   }
 
+  /** Centre-to-surface distance that still counts as holding on. */
   private get reach(): number {
-    return TUNING.car.height / 2 + TUNING.stick.reach;
+    const { suspensionRest, wheelRadius } = TUNING.car;
+    return suspensionRest + wheelRadius + TUNING.stick.reach;
   }
 
-  private nearestMarked(): MatterJS.BodyType | null {
-    const bodies = this.scene.matter.world.getAllBodies() as MatterJS.BodyType[];
-    let best: MatterJS.BodyType | null = null;
+  private nearestMarked(): number | null {
+    let best: number | null = null;
     let bestDist = this.reach;
-    for (const body of bodies) {
-      if (!isMarked(body)) continue;
-      const d = this.distanceTo(body);
+    for (const [handle, surface] of allSurfaces()) {
+      if (!surface.marked) continue;
+      const d = this.distanceTo(handle);
       if (d <= bestDist) {
-        best = body;
+        best = handle;
         bestDist = d;
       }
     }
     return best;
   }
 
-  private distanceTo(body: MatterJS.BodyType): number {
-    const p = this.car.position;
-    return length(sub(p, closestPointOnPolygon(p, body.vertices ?? [])));
+  private distanceTo(handle: number): number {
+    return length(this.offsetFrom(handle));
   }
 
-  private normalFrom(body: MatterJS.BodyType): Vec {
+  private normalFrom(handle: number): Vec2 {
+    return normalize(this.offsetFrom(handle));
+  }
+
+  private offsetFrom(handle: number): Vec2 {
     const p = this.car.position;
-    return normalize(sub(p, closestPointOnPolygon(p, body.vertices ?? [])));
+    const outline = surfaceOf(this.world.getCollider(handle))?.outline ?? [];
+    return outline.length ? sub(p, closestPointOnPolygon(p, outline)) : { x: Infinity, y: Infinity };
   }
 
   private detach(): void {
-    if (!this.attached) return;
+    if (this.attached === null) return;
     this.attached = null;
     this.car.setStuck(false);
     this.car.setGravityOverride(null);
-    this.car.setDriveSpeed();
+    this.car.setDriveSpeed(null);
   }
 }
-
-const isMarked = (body: MatterJS.BodyType): boolean => body.label === MARKED_SURFACE_LABEL;
-
-const bestUnderWheels = (contacts: Contact[], up: Vec): Contact =>
-  contacts.reduce((best, c) => (dot(c.normal, up) > dot(best.normal, up) ? c : best));
