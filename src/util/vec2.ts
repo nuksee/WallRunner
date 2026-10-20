@@ -53,3 +53,46 @@ export const closestPointOnPolygon = (p: Vec2, vertices: readonly Vec2[]): Vec2 
   }
   return best;
 };
+
+/** True when `p` lies inside a counter-clockwise convex polygon. */
+export const pointInConvex = (p: Vec2, vertices: readonly Vec2[]): boolean => {
+  for (let i = 0; i < vertices.length; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % vertices.length];
+    if ((b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x) < 0) return false;
+  }
+  return true;
+};
+
+/** Separating-axis test for two convex polygons (either winding). */
+export const convexOverlap = (a: readonly Vec2[], b: readonly Vec2[]): boolean => {
+  for (const poly of [a, b]) {
+    for (let i = 0; i < poly.length; i++) {
+      const p = poly[i];
+      const q = poly[(i + 1) % poly.length];
+      const axis = vec(q.y - p.y, p.x - q.x);
+      let minA = Infinity, maxA = -Infinity, minB = Infinity, maxB = -Infinity;
+      for (const v of a) {
+        const d = dot(v, axis);
+        minA = Math.min(minA, d);
+        maxA = Math.max(maxA, d);
+      }
+      for (const v of b) {
+        const d = dot(v, axis);
+        minB = Math.min(minB, d);
+        maxB = Math.max(maxB, d);
+      }
+      if (maxA < minB || maxB < minA) return false;
+    }
+  }
+  return true;
+};
+
+/** Gap between two convex polygons, 0 when they overlap. */
+export const convexDistance = (a: readonly Vec2[], b: readonly Vec2[]): number => {
+  if (convexOverlap(a, b)) return 0;
+  let best = Infinity;
+  for (const p of a) best = Math.min(best, length(sub(p, closestPointOnPolygon(p, b))));
+  for (const p of b) best = Math.min(best, length(sub(p, closestPointOnPolygon(p, a))));
+  return best;
+};

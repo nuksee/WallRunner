@@ -112,6 +112,17 @@ export class Car {
     return this.stuck;
   }
 
+  /**
+   * Outline of the body plus wheels in the play plane, counter-clockwise, for
+   * hazard and pickup tests.
+   */
+  get hull(): Vec2[] {
+    const { length, height, suspensionRest, wheelRadius } = TUNING.car;
+    const L = length / 2;
+    const bottom = MOUNT_Y - suspensionRest - wheelRadius + 0.15;
+    return [vec(-L, bottom), vec(L, bottom), vec(L, height / 2), vec(-L, height / 2)].map((p) => this.toWorld(p));
+  }
+
   /** Wheel centres in chassis space plus spin angle, for rendering. */
   get wheelVisuals(): Array<{ x: number; y: number; spin: number }> {
     const { suspensionRest, wheelRadius } = TUNING.car;

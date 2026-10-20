@@ -18,6 +18,10 @@ export const registerSurface = (collider: RAPIER.Collider, surface: Surface): vo
   surfaces.set(collider.handle, surface);
 };
 
+export const unregisterSurface = (collider: RAPIER.Collider): void => {
+  surfaces.delete(collider.handle);
+};
+
 export const surfaceOf = (collider: RAPIER.Collider): Surface | undefined => surfaces.get(collider.handle);
 
 export const allSurfaces = (): Array<[number, Surface]> => [...surfaces.entries()];

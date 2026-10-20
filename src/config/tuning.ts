@@ -1,8 +1,8 @@
 /**
- * Shared tuning constants for Milestone 1.
+ * Shared tuning constants.
  *
- * C1–C3 expose their limits here so other components (and later the C4 course
- * generator) can read them without reaching into car internals. Units are
+ * C1–C3 expose their limits here so the C4 course generator and C5 rules can
+ * read them without reaching into car internals. Units are
  * metres, seconds and kilograms; +y is up and the play plane is z = 0.
  *
  * Values are read every frame, so the dev tuning panel can edit them live.
@@ -69,6 +69,43 @@ export const TUNING = {
     alignRate: 9,
     /** After a hop, stick ignores surfaces for this long so the car can leave, s. */
     hopRelease: 0.25,
+  },
+
+  /** C4 Course generator. */
+  course: {
+    /** Distance over which difficulty ramps from 0 to 1, m. */
+    rampDistance: 2500,
+    /**
+     * Share of the computed hop reach a gap may use (0–1). The rest is slack
+     * for late presses and imperfect timing.
+     */
+    reachSafety: 0.78,
+    /** Fuel the check keeps in reserve after every challenge, as a share of one hop (slack for a wasted hop). */
+    spareHop: 0.5,
+    /** Least ground between touching down and the next take-off, as seconds of driving at cruise speed. */
+    reactionTime: 0.5,
+  },
+
+  /** C5 Rules and score. */
+  rules: {
+    /** Battery capacity. The run ends when it hits zero (R1). */
+    chargeCapacity: 100,
+    /** Charge drained per second at the start of a run. */
+    chargeDrain: 2.4,
+    /** Extra drain per second for every kilometre travelled. */
+    chargeDrainPerKm: 1.2,
+    /** Charge restored by one charge cell. */
+    chargePerCell: 28,
+    /** Style points per second stuck to a wall (R2). Ceilings score double. */
+    wallPointsPerSecond: 20,
+    /** Airtime shorter than this earns nothing, s. */
+    airtimeMin: 0.7,
+    /** Style points per second of airtime beyond the minimum. */
+    airPointsPerSecond: 30,
+    /** Style points for passing a hazard closer than `nearMissMargin` without touching it. */
+    nearMissPoints: 50,
+    /** How close counts as a near miss, m. */
+    nearMissMargin: 1.1,
   },
 };
 
