@@ -12,3 +12,4 @@
 - `npm install`
 - `npm run dev` — local dev server
 - `npm run build` — type-check and production build to `dist/`
+- Deploy: every push to `main` builds and publishes to GitHub Pages (`.github/workflows/deploy.yml`) at https://nuksee.github.io/WallRunner/
