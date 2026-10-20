@@ -4,42 +4,56 @@ import { Car } from '../car/Car';
 import { Hop } from '../car/Hop';
 import { Stick } from '../car/Stick';
 import { TUNING } from '../config/tuning';
-import { CourseInfo, buildTestCourse } from '../course/TestCourse';
+import { Course } from '../generator/Course';
 import { Input } from '../input/Input';
 import { CarView } from '../render/CarView';
 import { ChaseCamera } from '../render/ChaseCamera';
+import { CauseOfDeath, Rules, RunResult, RunSignals } from '../rules/Rules';
 import { Hud } from '../ui/Hud';
 import { createTuningPanel } from '../ui/TuningPanel';
+import { Emitter } from '../util/Emitter';
+import { randomSeed } from '../util/random';
+import { scale } from '../util/vec2';
 
 const STEP = 1 / 60;
 const MAX_STEPS_PER_FRAME = 5;
-/** Seconds after a run ends before Hop restarts, so a mid-air tap doesn't skip the banner. */
-const RESTART_DELAY = 0.5;
+/** Seconds after a run ends before Hop restarts, so a mid-air tap doesn't skip the results. */
+const RESTART_DELAY = 0.8;
+const BEST_KEY = 'wallrunner.best';
+
+const DEATH_TITLES: Record<CauseOfDeath, string> = {
+  pit: 'Fell in a pit',
+  hazard: 'Zapped by a fence',
+  'upside-down': 'Landed on the roof',
+  charge: 'Out of charge',
+};
 
 /**
- * Milestone 1 feel prototype: one handmade course, the car, and a bare
- * distance counter. A run ends on a pit, an upside-down landing, or the finish;
- * proper fail states and scoring belong to C5 (Milestone 2).
+ * Milestone 2: the endless generated course (C4) with fail states, charge and
+ * scoring (C5) around the M1 car. Wires components together through events.
  */
 export class Game {
   readonly world: RAPIER.World;
   readonly car: Car;
   readonly hop: Hop;
   readonly stick: Stick;
+  readonly course: Course;
+  readonly rules: Rules;
 
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly camera: ChaseCamera;
   private readonly carView: CarView;
-  private readonly course: CourseInfo;
   private readonly input: Input;
   private readonly hud: Hud;
+  private readonly signals = new Emitter<RunSignals>();
 
   private accumulator = 0;
   private lastTime = 0;
-  private bestX = 0;
+  private best = readBest();
   /** Seconds since the run ended, or -1 while playing. */
   runOverFor = -1;
+  lastResult: RunResult | null = null;
 
   constructor(container: HTMLElement, overlay: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -60,24 +74,39 @@ export class Game {
 
     this.world = new RAPIER.World({ x: 0, y: 0, z: 0 });
     this.world.timestep = STEP;
-    this.course = buildTestCourse(this.world, this.scene);
+    this.course = new Course(this.world, this.scene);
+    this.course.reset(randomSeed());
 
     this.car = new Car(this.world, this.course.start.x, this.course.start.y);
     this.hop = new Hop(this.car);
     this.stick = new Stick(this.world, this.car);
     this.carView = new CarView(this.car, this.scene);
     this.camera = new ChaseCamera(this.car, sun);
+    this.rules = new Rules(this.signals);
 
     this.input = new Input(overlay);
     this.hud = new Hud(overlay);
     createTuningPanel(overlay, () => this.restart());
 
-    this.car.events.on('upside-down', () => this.endRun('Upside down!'));
+    this.car.events.on('upside-down', () => this.signals.emit('fail', 'upside-down'));
+    this.course.events.on('pit', () => this.signals.emit('fail', 'pit'));
+    this.course.events.on('hazard', () => {
+      this.car.setVelocity(scale(this.car.velocity, 0.25));
+      this.signals.emit('fail', 'hazard');
+    });
+    this.course.events.on('pickup', () => this.signals.emit('pickup'));
+    this.course.events.on('near-miss', () => this.signals.emit('near-miss'));
+    this.rules.events.on('style', (label, points) => this.hud.popup(label, points));
+    this.rules.events.on('result', (result) => this.endRun(result));
+
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyR') this.restart();
     });
     window.addEventListener('resize', () => this.resize());
     this.resize();
+    // Compile every shader now so the first fence or cell on screen doesn't stall a frame.
+    this.renderer.compile(this.scene, this.camera.camera);
+    this.rules.start(this.course.seed, this.course.start.x);
   }
 
   start(): void {
@@ -85,13 +114,15 @@ export class Game {
     this.renderer.setAnimationLoop((t) => this.frame(t));
   }
 
-  restart(): void {
+  /** New run on a new course. */
+  restart(seed = randomSeed()): void {
     const { x, y } = this.course.start;
+    this.stick.reset();
     this.car.reset(x, y);
     this.hop.reset();
-    this.stick.reset();
+    this.course.reset(seed);
+    this.rules.start(seed, x);
     this.camera.snap();
-    this.bestX = 0;
     this.runOverFor = -1;
     this.hud.hideRunOver();
   }
@@ -106,7 +137,7 @@ export class Game {
       if (this.runOverFor > RESTART_DELAY && this.input.justPressed('hop')) this.restart();
     }
 
-    const playing = this.runOverFor < 0;
+    let playing = this.runOverFor < 0;
     let hopPressed = playing && this.input.justPressed('hop');
     this.accumulator = Math.min(this.accumulator + dt, STEP * MAX_STEPS_PER_FRAME);
     while (this.accumulator >= STEP) {
@@ -117,28 +148,50 @@ export class Game {
       hopPressed = false;
       this.car.step(STEP, !playing || this.input.isDown('brake'));
       this.world.step();
+      if (playing) {
+        this.course.check(this.car.hull, this.car.position);
+        const { x } = this.car.position;
+        this.signals.emit('tick', {
+          dt: STEP,
+          x,
+          grounded: this.car.isGrounded,
+          stuck: this.car.isStuck,
+          upY: this.car.up.y,
+        });
+        playing = !this.rules.isOver;
+      }
     }
 
-    const { x, y } = this.car.position;
-    this.bestX = Math.max(this.bestX, x - this.course.start.x);
-    if (playing && y < this.course.killY) this.endRun('Fell in the pit');
-    if (playing && x > this.course.finishX) this.endRun('Course clear!');
+    const { x } = this.car.position;
+    this.course.update(x);
+    this.course.animate(time / 1000);
 
-    const hint = [...this.course.hints].reverse().find((h) => x >= h.x);
-    this.hud.showHint(
-      playing && hint ? hint.text.replace(/\{(hop|stick)\}/g, (_, a: 'hop' | 'stick') => this.input.label(a)) : '',
-    );
-    this.hud.update(this.hop.fuel, this.hop.capacity, TUNING.hop.fuelCost, this.stick.isAttached, this.bestX);
+    const hint = playing ? this.course.hintAt(x) : '';
+    this.hud.showHint(hint.replace(/\{(hop|stick)\}/g, (_, a: 'hop' | 'stick') => this.input.label(a)));
+    this.hud.update({
+      fuel: this.hop.fuel,
+      capacity: this.hop.capacity,
+      hopCost: TUNING.hop.fuelCost,
+      stuck: this.stick.isAttached,
+      charge: this.rules.charge / TUNING.rules.chargeCapacity,
+      score: this.rules.score,
+      metres: this.rules.distance,
+    });
 
     this.carView.update(dt);
     this.camera.update(dt);
     this.renderer.render(this.scene, this.camera.camera);
   }
 
-  private endRun(title: string): void {
-    if (this.runOverFor >= 0) return;
+  private endRun(result: RunResult): void {
     this.runOverFor = 0;
-    this.hud.showRunOver(title, this.bestX, `${this.input.label('hop')} to run again`);
+    this.lastResult = result;
+    const isBest = result.score > this.best;
+    if (isBest) {
+      this.best = result.score;
+      writeBest(result.score);
+    }
+    this.hud.showRunOver(DEATH_TITLES[result.cause], result, this.best, isBest, `${this.input.label('hop')} to run again`);
   }
 
   private resize(): void {
@@ -146,5 +199,21 @@ export class Game {
     const h = window.innerHeight;
     this.renderer.setSize(w, h);
     this.camera.setAspect(w / h);
+  }
+}
+
+function readBest(): number {
+  try {
+    return Number(localStorage.getItem(BEST_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeBest(score: number): void {
+  try {
+    localStorage.setItem(BEST_KEY, String(score));
+  } catch {
+    // Storage blocked: the best score lasts for this visit only.
   }
 }

@@ -1,4 +1,5 @@
 import RAPIER from '@dimforge/rapier3d-compat';
+import { TUNING } from './config/tuning';
 import { Game } from './game/Game';
 
 await RAPIER.init();
@@ -7,5 +8,5 @@ const game = new Game(document.getElementById('game')!, document.getElementById(
 game.start();
 
 if (import.meta.env.DEV) {
-  (window as unknown as Record<string, unknown>).__wallrunner = game;
+  Object.assign(window, { __wallrunner: game, __tuning: TUNING });
 }

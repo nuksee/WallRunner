@@ -47,8 +47,8 @@ Eight specs, each owning one concern behind a narrow interface, so any one can b
 | C1 Car physics | Auto-throttle, brake, gravity, rotation, flip detection (B1, R1) | none | Car runs a flat and sloped strip and reports "upside-down landing" reliably | `src/car/Car.ts` |
 | C2 Hop | Thrust impulse, fuel tank, refill rate (L2) | C1 | Hop height and fuel cost are tunable constants; empty tank blocks hops | `src/car/Hop.ts` |
 | C3 Stick | Hold-to-stick on marked surfaces, release, fall-off (L3, P1) | C1 | Car drives a full floor-wall-ceiling loop while held; drops on release | `src/car/Stick.ts` |
-| C4 Course generator | Chunks, pits, hazards, marked surfaces, pickups (L1) | C1–C3 constants | Every chunk passes a reachability check using real hop and stick limits | `src/generator/` (M2) |
-| C5 Rules and score | Fail states, charge drain, distance, style bonuses (R1, R2) | C1–C4 events | A run emits one result: distance, score, cause of death, duration | `src/rules/` (M2) |
+| C4 Course generator | Chunks, pits, hazards, marked surfaces, pickups (L1) | C1–C3 constants | Every chunk passes a reachability check using real hop and stick limits | `src/generator/` |
+| C5 Rules and score | Fail states, charge drain, distance, style bonuses (R1, R2) | C1–C4 events | A run emits one result: distance, score, cause of death, duration | `src/rules/Rules.ts` |
 | C6 Input | Keyboard map and 3-button touch layout (R3, B1) | none | Same three actions on both; touch tested on a real phone | `src/input/Input.ts` |
 | C7 Leaderboard | Submit, sanity check, top-N, nickname filter (P3, B2, B4, B5) | C5 result | Impossible scores rejected; board loads in game and on its own page | `src/leaderboard/` (M3) |
 | C8 Ads | Portal SDK slot for interstitials and rewarded ads (P2) | C5 | Stubbed in v1: one interface, no live ads | `src/ads/` (M3) |
@@ -72,13 +72,30 @@ Prove that hopping and wall-driving are fun on one handmade test course before b
 
 **Exit test:** five people who haven't seen it play on a phone without instructions. Pass if at least three clear the ceiling section and start another run unprompted.
 
+## Milestone 2: endless run
+
+Turn the feel prototype into the real loop: an endless generated course with all four fail states and a score worth beating. Defined on 2026-10-20 from the C4 and C5 rows above.
+
+**In scope:** C4, C5, a results screen, local best score. The M1 handmade course is retired; its lessons become the first-run intro chunks.
+**Out of scope:** C7 leaderboard, C8 ads, sound, menus, naming and art direction.
+
+- [x] C4: seeded endless course streamed in chunks (runway, bumps, pit, double-hop gap, fences, wall run, loop, jump-and-grab wall)
+- [x] C4: every chunk passes a reachability check against live hop, fuel and stick limits before it is built; failures re-roll easier
+- [x] C4: difficulty ramps with distance; charge cells placed on the main route from a charge budget so the battery is always survivable
+- [x] C4: first-run intro teaches one move or fail state per stretch (open question "Four fail states for strangers")
+- [x] C5: four fail states (pit, fence, upside-down landing, empty charge); charge drains faster with distance
+- [x] C5: score = distance + style (wall and ceiling runs, airtime, near misses), one run result per run (distance, score, cause, duration, seed)
+- [x] Results screen with breakdown and local best; tuning panel gains Course and Rules folders
+
+**Exit test:** five people who haven't seen it play on a phone. Pass if most beat their first score within three runs and nobody hits a jump they call impossible.
+
 ## Open questions and risks
 
 | Item | Why it matters | Mitigation or owner |
 | --- | --- | --- |
 | Hold-to-stick plus Hop on touch | Holding one thumb while tapping another may feel cramped | M1 exit test decides; fallback is auto-stick (reopens P1) |
 | Four fail states for strangers | Can feel unfair in the first minute | Introduce one per early stretch of the course in C4 |
-| Generator reachability | An impossible gap kills trust in an endless runner | C4 validates each chunk against C1–C3 constants |
+| Generator reachability | An impossible gap kills trust in an endless runner | C4 validates each chunk against C1–C3 constants (done in M2; the check is a model, so the M2 playtest should report any jump that felt impossible) |
 | Portal rules vs own backend | Portals may limit outside services or provide their own leaderboards | Check target portal terms before building C7 |
 | Nickname abuse | Public board shows player-typed names | Filter in C7; manual removal path |
 | Car and game name | Needed before any public link | Open: pick after M1 |

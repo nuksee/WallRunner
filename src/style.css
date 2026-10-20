@@ -4,21 +4,38 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e8
 #overlay { position: fixed; inset: 0; pointer-events: none; }
 #overlay > * { pointer-events: auto; }
 
-.hud-fuel { position: absolute; top: 16px; left: 20px; display: flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: 0.1em; pointer-events: none; }
-.fuel-bar { position: relative; width: 200px; height: 14px; background: rgba(0, 0, 0, 0.5); border: 2px solid #56607a; border-radius: 4px; overflow: hidden; }
-.fuel-fill { height: 100%; background: #4cc9f0; transition: background 0.15s; }
-.fuel-fill.low { background: #ff4d6d; }
+.hud-meters { position: absolute; top: 14px; left: 20px; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.hud-row { display: flex; align-items: center; gap: 10px; font-size: 12px; letter-spacing: 0.1em; }
+.hud-row span { width: 58px; }
+.bar { position: relative; width: 200px; height: 14px; background: rgba(0, 0, 0, 0.5); border: 2px solid #56607a; border-radius: 4px; overflow: hidden; }
+.fill { height: 100%; transition: background 0.15s; }
+.fuel-fill { background: #4cc9f0; }
+.charge-fill { background: #7cff6b; }
+.fill.low { background: #ff4d6d; }
+.charge-fill.low { animation: blink 0.5s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.35; } }
 .fuel-ticks i { position: absolute; top: 0; bottom: 0; width: 2px; background: #0b0f17; }
 .stick-light { width: 12px; height: 12px; border-radius: 50%; background: #2a3142; transition: background 0.1s, box-shadow 0.1s; }
 .stick-light.on { background: #4cc9f0; box-shadow: 0 0 10px #4cc9f0; }
 
-.hud-distance { position: absolute; top: 10px; right: 64px; font-size: 28px; font-variant-numeric: tabular-nums; pointer-events: none; }
-.hud-hint { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 8px; background: rgba(11, 15, 23, 0.7); font-size: 20px; text-align: center; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+.hud-score { position: absolute; top: 8px; right: 64px; display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; pointer-events: none; }
+.hud-score b { font-size: 32px; line-height: 1.1; }
+.hud-score span { font-size: 15px; opacity: 0.75; }
+.hud-hint { position: absolute; top: 18%; left: 50%; transform: translateX(-50%); padding: 10px 18px; border-radius: 8px; background: rgba(11, 15, 23, 0.7); font-size: 20px; text-align: center; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: calc(100vw - 32px); box-sizing: border-box; }
 .hud-hint.show { opacity: 1; }
-.hud-banner { position: absolute; top: 36%; left: 50%; transform: translate(-50%, -50%); padding: 20px 36px; border-radius: 10px; background: rgba(11, 15, 23, 0.85); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
-.hud-banner strong { font-size: 36px; }
-.hud-banner span { font-size: 24px; color: #4cc9f0; }
-.hud-banner em { font-style: normal; font-size: 16px; opacity: 0.8; margin-top: 8px; }
+.hud-popups { position: absolute; top: 30%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; }
+.popup { font-size: 20px; font-weight: 600; text-shadow: 0 2px 6px #000; animation: rise 1.4s ease-out forwards; white-space: nowrap; }
+.popup b { color: #ffd166; }
+@keyframes rise { 0% { opacity: 0; transform: translateY(12px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-24px); } }
+.hud-banner { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); padding: 20px 36px; border-radius: 10px; background: rgba(11, 15, 23, 0.88); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; min-width: 240px; }
+.hud-banner strong { font-size: 30px; }
+.hud-banner .final { font-size: 44px; font-weight: 700; color: #4cc9f0; font-variant-numeric: tabular-nums; }
+.hud-banner.best .final { color: #ffd166; }
+.hud-banner small { font-size: 15px; opacity: 0.8; }
+.hud-banner table { margin-top: 8px; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.hud-banner td { padding: 2px 10px; }
+.hud-banner td:last-child { text-align: right; }
+.hud-banner em { font-style: normal; font-size: 16px; opacity: 0.8; margin-top: 10px; }
 .hidden { display: none !important; }
 
 .tuning-toggle { position: absolute; top: 10px; right: 14px; width: 38px; height: 38px; border-radius: 8px; border: 1px solid #56607a; background: rgba(11, 15, 23, 0.6); color: #e8edf5; font-size: 20px; cursor: pointer; }
@@ -29,3 +46,16 @@ body { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #e8
 .touch-stick { left: 4vw; bottom: 6vh; width: 150px; height: 150px; }
 .touch-hop { right: 4vw; bottom: 6vh; width: 150px; height: 150px; }
 .touch-brake { right: calc(4vw + 170px); bottom: 4vh; width: 92px; height: 92px; font-size: 14px; }
+
+@media (max-width: 560px) {
+  .hud-meters { left: 12px; }
+  .hud-row span { width: 50px; font-size: 10px; }
+  .bar { width: 120px; }
+  .hud-score { right: 60px; }
+  .hud-score b { font-size: 24px; }
+  .hud-hint { font-size: 16px; }
+  .hud-banner { padding: 16px 20px; text-align: center; }
+  .hud-banner strong { font-size: 24px; }
+  .touch-stick, .touch-hop { width: 128px; height: 128px; }
+  .touch-brake { right: 4vw; bottom: calc(6vh + 144px); width: 80px; height: 80px; }
+}

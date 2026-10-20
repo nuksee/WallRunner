@@ -4,7 +4,7 @@ A 2.5D endless-runner prototype for the browser. You drive an original electric 
 
 **▶ Play it:** https://nuksee.github.io/WallRunner/
 
-This is the Milestone 1 feel prototype: one handmade test course built to try the moves. The procedural course, scoring and leaderboard come in later milestones. The working title is a placeholder.
+This is Milestone 2: an endless, procedurally generated course with fail states, a draining battery and a style score. The leaderboard and ads come in Milestone 3. The working title is a placeholder.
 
 ## Controls
 
@@ -18,7 +18,9 @@ The car accelerates by itself. You control three actions:
 | Restart run | R | HOP after a run ends |
 | Tuning panel | T | ⚙ button |
 
-The fuel bar refills while your wheels are on a surface. A run ends if you fall into a pit or land upside down.
+The fuel bar refills while your wheels are on a surface. The charge bar drains all the time, faster the further you go; green cells top it up.
+
+A run ends if you fall into a pit, touch a red fence, land upside down, or run out of charge. Your score is distance plus style points for wall and ceiling runs, airtime and near misses over fences.
 
 ## Run it locally
 

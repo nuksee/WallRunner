@@ -2,7 +2,7 @@ import GUI from 'lil-gui';
 import { TUNING } from '../config/tuning';
 
 /**
- * M1 tuning panel: live sliders over the shared constants in tuning.ts.
+ * Tuning panel: live sliders over the shared constants in tuning.ts.
  * Toggle with the gear button or the T key. "Copy values" puts the current
  * numbers on the clipboard so good settings can be pasted back into tuning.ts.
  */
@@ -31,6 +31,20 @@ export function createTuningPanel(overlay: HTMLElement, onRestart: () => void): 
   stick.add(TUNING.stick, 'gravity', 10, 120, 1).name('stick pull (m/s²)');
   stick.add(TUNING.stick, 'alignRate', 2, 25, 0.5).name('turn rate (rad/s)');
   stick.add(TUNING.stick, 'reach', 0, 4, 0.1).name('reach (m)');
+
+  const course = gui.addFolder('Course (C4)').close();
+  course.add(TUNING.course, 'rampDistance', 300, 8000, 100).name('difficulty ramp (m)');
+  course.add(TUNING.course, 'reachSafety', 0.4, 1, 0.01).name('jump reach used');
+  course.add(TUNING.course, 'spareHop', 0, 1, 0.05).name('spare fuel (hops)');
+  course.add(TUNING.course, 'reactionTime', 0.3, 2, 0.05).name('reaction time (s)');
+
+  const rules = gui.addFolder('Rules (C5)').close();
+  rules.add(TUNING.rules, 'chargeDrain', 0, 10, 0.1).name('charge drain / s');
+  rules.add(TUNING.rules, 'chargeDrainPerKm', 0, 5, 0.1).name('extra drain per km');
+  rules.add(TUNING.rules, 'chargePerCell', 5, 100, 1).name('charge per cell');
+  rules.add(TUNING.rules, 'wallPointsPerSecond', 0, 100, 1).name('wall pts / s');
+  rules.add(TUNING.rules, 'airPointsPerSecond', 0, 100, 1).name('air pts / s');
+  rules.add(TUNING.rules, 'nearMissPoints', 0, 200, 5).name('near-miss pts');
 
   gui.add({ restart: onRestart }, 'restart').name('Restart run (R)');
   gui.add({ copy: () => navigator.clipboard?.writeText(JSON.stringify(TUNING, null, 2)) }, 'copy').name('Copy values');
