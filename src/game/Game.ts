@@ -1,18 +1,22 @@
 import RAPIER from '@dimforge/rapier3d-compat';
 import * as THREE from 'three';
+import { type Ads, createAds } from '../ads';
 import { Car } from '../car/Car';
 import { Hop } from '../car/Hop';
 import { Stick } from '../car/Stick';
-import { TUNING } from '../config/tuning';
+import { isTuned, TUNING } from '../config/tuning';
 import { Course } from '../generator/Course';
 import { Input } from '../input/Input';
+import { createLeaderboard, sanityProblem } from '../leaderboard';
 import { CarView } from '../render/CarView';
 import { ChaseCamera } from '../render/ChaseCamera';
 import { CauseOfDeath, Rules, RunResult, RunSignals } from '../rules/Rules';
+import { BoardPanel } from '../ui/BoardPanel';
 import { Hud } from '../ui/Hud';
 import { createTuningPanel } from '../ui/TuningPanel';
 import { Emitter } from '../util/Emitter';
 import { randomSeed } from '../util/random';
+import { isTyping } from '../util/typing';
 import { scale } from '../util/vec2';
 
 const STEP = 1 / 60;
@@ -29,8 +33,9 @@ const DEATH_TITLES: Record<CauseOfDeath, string> = {
 };
 
 /**
- * Milestone 2: the endless generated course (C4) with fail states, charge and
- * scoring (C5) around the M1 car. Wires components together through events.
+ * Milestone 3: the endless generated course (C4) with fail states, charge and
+ * scoring (C5) around the M1 car, plus the leaderboard (C7) and the ad slot
+ * (C8) between runs. Wires components together through events.
  */
 export class Game {
   readonly world: RAPIER.World;
@@ -46,6 +51,8 @@ export class Game {
   private readonly carView: CarView;
   private readonly input: Input;
   private readonly hud: Hud;
+  private readonly board: BoardPanel;
+  private readonly ads: Ads;
   private readonly signals = new Emitter<RunSignals>();
 
   private accumulator = 0;
@@ -54,6 +61,10 @@ export class Game {
   /** Seconds since the run ended, or -1 while playing. */
   runOverFor = -1;
   lastResult: RunResult | null = null;
+  /** Runs finished since the last interstitial, and when it was shown (s). */
+  private runsSinceAd = 0;
+  private lastAdAt = -Infinity;
+  private adShowing = false;
 
   constructor(container: HTMLElement, overlay: HTMLElement) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -86,6 +97,8 @@ export class Game {
 
     this.input = new Input(overlay);
     this.hud = new Hud(overlay);
+    this.board = new BoardPanel(this.hud.boardSlot, createLeaderboard());
+    this.ads = createAds(overlay);
     createTuningPanel(overlay, () => this.restart());
 
     this.car.events.on('upside-down', () => this.signals.emit('fail', 'upside-down'));
@@ -100,7 +113,7 @@ export class Game {
     this.rules.events.on('result', (result) => this.endRun(result));
 
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'KeyR') this.restart();
+      if (e.code === 'KeyR' && !isTyping(e)) this.nextRun();
     });
     window.addEventListener('resize', () => this.resize());
     this.resize();
@@ -127,6 +140,22 @@ export class Game {
     this.hud.hideRunOver();
   }
 
+  /** Leave the results screen: an interstitial first when one is due (C8), then a new run. */
+  private nextRun(): void {
+    if (this.adShowing) return;
+    const A = TUNING.ads;
+    const now = performance.now() / 1000;
+    const due = this.runOverFor >= 0 && A.interstitialEveryRuns > 0 && this.runsSinceAd >= A.interstitialEveryRuns && now - this.lastAdAt >= A.interstitialMinGap;
+    if (!due) return this.restart();
+    this.adShowing = true;
+    void this.ads.interstitial('between-runs').finally(() => {
+      this.adShowing = false;
+      this.runsSinceAd = 0;
+      this.lastAdAt = performance.now() / 1000;
+      this.restart();
+    });
+  }
+
   private frame(time: number): void {
     const dt = Math.min((time - this.lastTime) / 1000, 0.1);
     this.lastTime = time;
@@ -134,7 +163,7 @@ export class Game {
 
     if (this.runOverFor >= 0) {
       this.runOverFor += dt;
-      if (this.runOverFor > RESTART_DELAY && this.input.justPressed('hop')) this.restart();
+      if (this.runOverFor > RESTART_DELAY && this.input.justPressed('hop')) this.nextRun();
     }
 
     let playing = this.runOverFor < 0;
@@ -192,6 +221,8 @@ export class Game {
       writeBest(result.score);
     }
     this.hud.showRunOver(DEATH_TITLES[result.cause], result, this.best, isBest, `${this.input.label('hop')} to run again`);
+    this.runsSinceAd++;
+    this.board.show(result, isTuned() ? 'Tuned run, not posted' : sanityProblem(result));
   }
 
   private resize(): void {

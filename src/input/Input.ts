@@ -5,6 +5,8 @@
  * Touch: Stick on the left thumb; Hop and Brake on the right thumb.
  */
 
+import { isTyping } from '../util/typing';
+
 export type Action = 'hop' | 'stick' | 'brake';
 
 const ACTIONS: readonly Action[] = ['hop', 'stick', 'brake'];
@@ -39,7 +41,7 @@ export class Input {
   constructor(overlay: HTMLElement) {
     window.addEventListener('keydown', (e) => {
       const action = KEYS[e.code];
-      if (!action) return;
+      if (!action || isTyping(e)) return;
       e.preventDefault();
       if (!e.repeat) this.latched[action] = true;
       this.keysDown.add(e.code);
